@@ -17,8 +17,5 @@ npm-debug.log*
 *.tmp
 *.temp
 
-# Ignore large data files (host separately or use Git LFS)
-world.geojson
-resilience_timeline_2019_2030.json
-resilience_data_*.json
-*.geojson
+# Keep essential data files for deployment
+# world.geojson and resilience_timeline_2019_2030.json are needed!
