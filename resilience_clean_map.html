@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Global Resilience Map 2019-2030</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #1e293b;
+            overflow: hidden;
+        }
+        
+        #map {
+            height: 100vh;
+            width: 100%;
+        }
+        
+        .header {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            background: white;
+            padding: 20px 40px;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 28px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 5px;
+        }
+        
+        .header p {
+            font-size: 13px;
+            color: #6b7280;
+        }
+        
+        .controls {
+            position: absolute;
+            top: 120px;
+            left: 20px;
+            z-index: 1000;
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+            width: 280px;
+        }
+        
+        .control-group {
+            margin-bottom: 15px;
+        }
+        
+        .control-group:last-child {
+            margin-bottom: 0;
+        }
+        
+        .control-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            font-size: 13px;
+            color: #374151;
+        }
+        
+        .control-group select {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 14px;
+            background: white;
+            cursor: pointer;
+        }
+        
+        .control-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .legend {
+            position: absolute;
+            bottom: 30px;
+            right: 30px;
+            z-index: 1000;
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+            min-width: 200px;
+        }
+        
+        .legend h4 {
+            margin-bottom: 12px;
+            color: #374151;
+            font-size: 16px;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 13px;
+        }
+        
+        .legend-color {
+            width: 30px;
+            height: 20px;
+            margin-right: 10px;
+            border-radius: 4px;
+        }
+        
+        .country-detail {
+            position: absolute;
+            top: 120px;
+            right: 20px;
+            z-index: 1000;
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 8px 40px rgba(0,0,0,0.25);
+            width: 450px;
+            max-height: calc(100vh - 150px);
+            overflow-y: auto;
+            display: none;
+        }
+        
+        .country-detail.show {
+            display: block;
+            animation: slideIn 0.3s ease-out;
+        }
+        
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        .country-detail h3 {
+            margin: 0 0 15px 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-size: 26px;
+            padding-right: 30px;
+        }
+        
+        .close-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #9ca3af;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .close-btn:hover {
+            color: #667eea;
+        }
+        
+        .metric-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin: 20px 0;
+        }
+        
+        .metric-card {
+            background: #f9fafb;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        
+        .metric-card .label {
+            font-size: 12px;
+            color: #6b7280;
+            margin-bottom: 5px;
+        }
+        
+        .metric-card .value {
+            font-size: 24px;
+            font-weight: 700;
+            color: #1f2937;
+        }
+        
+        .metric-card.overall {
+            grid-column: 1 / -1;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .metric-card.overall .label {
+            color: rgba(255,255,255,0.9);
+        }
+        
+        .metric-card.overall .value {
+            color: white;
+            font-size: 36px;
+        }
+        
+        #countryChart {
+            margin-top: 20px;
+            max-height: 250px;
+        }
+        
+        .stats {
+            position: absolute;
+            top: 120px;
+            left: 320px;
+            z-index: 1000;
+            background: white;
+            padding: 15px 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+            font-size: 13px;
+        }
+        
+        .stats div {
+            margin-bottom: 5px;
+        }
+        
+        .stats strong {
+            color: #667eea;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🌍 Global Resilience Map</h1>
+        <p>Interactive Visualization 2019-2030 | DFM+BSTS Forecasting</p>
+    </div>
+    
+    <div class="controls">
+        <div class="control-group">
+            <label>📅 Select Year</label>
+            <select id="yearSelect" onchange="updateMap()">
+                <option value="2019">2019 (Historical)</option>
+                <option value="2020">2020</option>
+                <option value="2021">2021</option>
+                <option value="2022">2022</option>
+                <option value="2023">2023</option>
+                <option value="2024">2024</option>
+                <option value="2025">2025</option>
+                <option value="2026" selected>2026 (Current)</option>
+                <option value="2027">2027 (Forecast)</option>
+                <option value="2028">2028 (Forecast)</option>
+                <option value="2029">2029 (Forecast)</option>
+                <option value="2030">2030 (Forecast)</option>
+            </select>
+        </div>
+        <div class="control-group">
+            <label>📊 Resilience Pillar</label>
+            <select id="pillarSelect" onchange="updateMap()">
+                <option value="overall">Overall Resilience</option>
+                <option value="financial">💰 Financial</option>
+                <option value="social">👥 Social</option>
+                <option value="institutional">🏛️ Institutional</option>
+                <option value="infrastructure">🏗️ Infrastructure</option>
+            </select>
+        </div>
+    </div>
+    
+    <div class="stats" id="stats">
+        <div><strong>Countries:</strong> <span id="countryCount">-</span></div>
+        <div><strong>Global Avg:</strong> <span id="globalAvg">-</span></div>
+        <div><strong>Highest:</strong> <span id="highestCountry">-</span></div>
+    </div>
+    
+    <div id="map"></div>
+    
+    <div class="legend">
+        <h4>Resilience Score</h4>
+        <div class="legend-item">
+            <div class="legend-color" style="background: #166534;"></div>
+            <span>0.66+ Excellent</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background: #22c55e;"></div>
+            <span>0.60-0.66 Good</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background: #facc15;"></div>
+            <span>0.53-0.60 Moderate</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background: #f97316;"></div>
+            <span>0.45-0.53 Low</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background: #dc2626;"></div>
+            <span>&lt;0.45 Critical</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background: #d1d5db;"></div>
+            <span>No Data</span>
+        </div>
+    </div>
+    
+    <div class="country-detail" id="countryDetail">
+        <button class="close-btn" onclick="closeDetail()">×</button>
+        <h3 id="countryName"></h3>
+        <div class="metric-grid">
+            <div class="metric-card overall">
+                <div class="label">Overall Resilience</div>
+                <div class="value" id="overallScore">-</div>
+            </div>
+            <div class="metric-card">
+                <div class="label">💰 Financial</div>
+                <div class="value" id="financialScore">-</div>
+            </div>
+            <div class="metric-card">
+                <div class="label">👥 Social</div>
+                <div class="value" id="socialScore">-</div>
+            </div>
+            <div class="metric-card">
+                <div class="label">🏛️ Institutional</div>
+                <div class="value" id="institutionalScore">-</div>
+            </div>
+            <div class="metric-card">
+                <div class="label">🏗️ Infrastructure</div>
+                <div class="value" id="infrastructureScore">-</div>
+            </div>
+        </div>
+        <canvas id="countryChart"></canvas>
+    </div>
+
+    <script>
+        let map, geoJsonLayer, countryChartInstance;
+        let TIMELINE_DATA = {};
+        let WORLD_GEOJSON = {};
+        
+        // Initialize map
+        map = L.map('map', {
+            center: [20, 0],
+            zoom: 2,
+            minZoom: 2,
+            maxZoom: 6,
+            zoomControl: true,
+            attributionControl: false
+        });
+        
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            maxZoom: 19
+        }).addTo(map);
+        
+        // Load data
+        Promise.all([
+            fetch('resilience_timeline_2019_2030.json').then(r => r.json()),
+            fetch('world.geojson').then(r => r.json())
+        ]).then(([timelineData, geoJson]) => {
+            // Convert timeline data to lookup
+            timelineData.forEach(country => {
+                if (country.iso3) {
+                    TIMELINE_DATA[country.iso3] = country;
+                }
+            });
+            WORLD_GEOJSON = geoJson;
+            updateMap();
+        });
+        
+        function updateMap() {
+            const year = document.getElementById('yearSelect').value;
+            const pillar = document.getElementById('pillarSelect').value;
+            
+            if (geoJsonLayer) {
+                map.removeLayer(geoJsonLayer);
+            }
+            
+            geoJsonLayer = L.geoJSON(WORLD_GEOJSON, {
+                style: (feature) => getStyle(feature, year, pillar),
+                onEachFeature: (feature, layer) => {
+                    layer.on({
+                        mouseover: (e) => {
+                            e.target.setStyle({ weight: 2, color: '#fff' });
+                        },
+                        mouseout: (e) => {
+                            e.target.setStyle({ weight: 1, color: '#fff' });
+                        },
+                        click: (e) => showCountryDetail(feature, year)
+                    });
+                }
+            }).addTo(map);
+            
+            updateStats(year, pillar);
+        }
+        
+        function getStyle(feature, year, pillar) {
+            const iso3 = feature.properties.ISO_A3 || feature.properties.iso_a3;
+            const country = TIMELINE_DATA[iso3];
+            
+            if (!country || !country.timeline[year]) {
+                return { fillColor: '#d1d5db', weight: 1, color: '#fff', fillOpacity: 0.7 };
+            }
+            
+            const score = country.timeline[year][pillar];
+            return {
+                fillColor: getColor(score),
+                weight: 1,
+                color: '#fff',
+                fillOpacity: 0.8
+            };
+        }
+        
+        function getColor(score) {
+            if (!score || score === 0) return '#d1d5db';
+            if (score >= 0.66) return '#166534';
+            if (score >= 0.60) return '#22c55e';
+            if (score >= 0.53) return '#facc15';
+            if (score >= 0.45) return '#f97316';
+            return '#dc2626';
+        }
+        
+        function updateStats(year, pillar) {
+            const countries = Object.values(TIMELINE_DATA);
+            const scores = countries
+                .map(c => c.timeline[year]?.[pillar])
+                .filter(s => s > 0);
+            
+            document.getElementById('countryCount').textContent = scores.length;
+            
+            const avg = scores.reduce((a, b) => a + b, 0) / scores.length;
+            document.getElementById('globalAvg').textContent = avg.toFixed(3);
+            
+            const highest = countries.reduce((max, c) => {
+                const score = c.timeline[year]?.[pillar] || 0;
+                return score > max.score ? { name: c.name, score } : max;
+            }, { name: '', score: 0 });
+            
+            document.getElementById('highestCountry').textContent = 
+                `${highest.name} (${highest.score.toFixed(3)})`;
+        }
+        
+        function showCountryDetail(feature, year) {
+            const iso3 = feature.properties.ISO_A3 || feature.properties.iso_a3;
+            const country = TIMELINE_DATA[iso3];
+            
+            if (!country || !country.timeline[year]) return;
+            
+            const data = country.timeline[year];
+            
+            document.getElementById('countryName').textContent = country.name;
+            document.getElementById('overallScore').textContent = (data.overall || 0).toFixed(3);
+            document.getElementById('financialScore').textContent = (data.financial || 0).toFixed(3);
+            document.getElementById('socialScore').textContent = (data.social || 0).toFixed(3);
+            document.getElementById('institutionalScore').textContent = (data.institutional || 0).toFixed(3);
+            document.getElementById('infrastructureScore').textContent = (data.infrastructure || 0).toFixed(3);
+            
+            // Show chart
+            const years = ['2019', '2020', '2021', '2022', '2023', '2024', '2025', '2026', '2027', '2028', '2029', '2030'];
+            const historicalYears = years.slice(0, 8);
+            const forecastYears = years.slice(8);
+            
+            const historicalData = historicalYears.map(y => country.timeline[y]?.overall || null);
+            const forecastData = forecastYears.map(y => country.timeline[y]?.overall || null);
+            
+            if (countryChartInstance) {
+                countryChartInstance.destroy();
+            }
+            
+            const ctx = document.getElementById('countryChart').getContext('2d');
+            countryChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: years,
+                    datasets: [
+                        {
+                            label: 'Historical',
+                            data: [...historicalData, null, null, null, null],
+                            borderColor: '#667eea',
+                            backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                            borderWidth: 3,
+                            fill: true,
+                            tension: 0.4
+                        },
+                        {
+                            label: 'Forecast',
+                            data: [null, null, null, null, null, null, null, historicalData[7], ...forecastData],
+                            borderColor: '#22c55e',
+                            backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                            borderWidth: 3,
+                            borderDash: [5, 5],
+                            fill: true,
+                            tension: 0.4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: { display: true, position: 'top' }
+                    },
+                    scales: {
+                        y: { min: 0, max: 1 }
+                    }
+                }
+            });
+            
+            document.getElementById('countryDetail').classList.add('show');
+        }
+        
+        function closeDetail() {
+            document.getElementById('countryDetail').classList.remove('show');
+        }
+    </script>
+</body>
+</html>

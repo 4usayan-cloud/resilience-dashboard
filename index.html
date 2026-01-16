@@ -3,64 +3,230 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Global Resilience Dashboard</title>
+    <title>Global Resilience Atlas</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;650&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        html, body { width: 100%; height: 100%; font-family: Arial, sans-serif; }
-        body { display: flex; flex-direction: column; }
-        header { background: #0066cc; color: white; padding: 15px 20px; flex-shrink: 0; display: flex; justify-content: space-between; align-items: center; }
-        header h1 { margin: 0; font-size: 20px; }
-        header p { margin: 5px 0 0 0; font-size: 12px; opacity: 0.9; }
-        .info-btn { background: white; color: #0066cc; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold; }
-        .info-btn:hover { background: #f0f0f0; }
-        .wrapper { display: flex; flex: 1; position: relative; }
-        #map { flex: 1; }
-        .sidebar { width: 320px; background: white; border-left: 1px solid #ccc; overflow-y: auto; padding: 15px; }
-        .sidebar h2 { font-size: 14px; color: #0066cc; margin-bottom: 10px; }
-        .score-box { background: #f0f8ff; padding: 10px; border-radius: 4px; margin: 8px 0; border-left: 3px solid #0066cc; }
-        .score-label { font-size: 10px; color: #666; margin-bottom: 3px; }
-        .score-value { font-size: 20px; font-weight: bold; color: #0066cc; }
-        .pillar { font-size: 11px; margin: 5px 0; padding: 6px; background: #f9f9f9; border-radius: 3px; }
-        .pillar-val { font-weight: bold; color: #0066cc; }
-        .legend { background: #f9f9f9; padding: 10px; border-radius: 4px; margin-top: 15px; font-size: 11px; }
-        .legend-row { margin: 4px 0; }
-        .legend-color { display: inline-block; width: 12px; height: 10px; margin-right: 5px; border: 1px solid #333; }
-        .default { color: #999; }
-        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; }
+        :root {
+            --ink: #0f172a;
+            --muted: #64748b;
+            --accent: #0ea5a4;
+            --accent-dark: #0f766e;
+            --accent-soft: rgba(14, 165, 164, 0.14);
+            --panel: #ffffff;
+            --shadow: 0 16px 40px rgba(15, 23, 42, 0.12);
+            --radius-lg: 20px;
+        }
+        html, body { width: 100%; height: 100%; font-family: 'Space Grotesk', sans-serif; color: var(--ink); }
+        body {
+            display: flex;
+            flex-direction: column;
+            background: radial-gradient(circle at 20% 20%, #fef3c7 0%, transparent 50%), radial-gradient(circle at 80% 10%, #ccfbf1 0%, transparent 45%), linear-gradient(135deg, #f8fafc 0%, #eef2f7 100%);
+        }
+        header {
+            background: linear-gradient(120deg, #0f172a 0%, #0f766e 60%, #14b8a6 100%);
+            color: #f8fafc;
+            padding: 18px 28px;
+            flex-shrink: 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 10px 30px rgba(15, 23, 42, 0.25);
+        }
+        header h1 {
+            margin: 0;
+            font-size: 26px;
+            font-weight: 650;
+            font-family: 'Fraunces', serif;
+            letter-spacing: 0.3px;
+        }
+        header p { margin: 6px 0 0 0; font-size: 14px; opacity: 0.9; }
+        .brand { display: flex; flex-direction: column; gap: 8px; }
+        .title-row { display: flex; align-items: center; gap: 12px; }
+        .brand-mark { font-size: 26px; }
+        .meta-pills { display: flex; flex-wrap: wrap; gap: 8px; }
+        .pill {
+            background: rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            padding: 6px 12px;
+            border-radius: 999px;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+        }
+        .info-btn {
+            background: #f8fafc;
+            color: #0f172a;
+            border: none;
+            padding: 10px 18px;
+            border-radius: 999px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            box-shadow: 0 8px 18px rgba(15, 23, 42, 0.25);
+        }
+        .info-btn:hover { transform: translateY(-2px); }
+        .wrapper { display: flex; flex: 1; position: relative; gap: 18px; padding: 18px; }
+        #map {
+            flex: 1;
+            cursor: crosshair;
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            box-shadow: var(--shadow);
+        }
+        .sidebar {
+            width: 360px;
+            background: var(--panel);
+            border-radius: var(--radius-lg);
+            overflow-y: auto;
+            padding: 22px;
+            box-shadow: var(--shadow);
+            animation: riseIn 0.4s ease;
+        }
+        .sidebar h2 { font-size: 18px; color: var(--ink); margin-bottom: 6px; font-weight: 600; }
+        .sidebar p.helper { font-size: 13px; color: var(--muted); margin-bottom: 14px; }
+        .search-box { margin-bottom: 15px; }
+        .search-box input {
+            width: 100%;
+            padding: 12px 14px;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            font-size: 14px;
+            transition: border 0.2s, box-shadow 0.2s;
+            background: #f8fafc;
+        }
+        .search-box input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+        .search-results { max-height: 200px; overflow-y: auto; background: white; border: 1px solid #e0e0e0; border-radius: 8px; margin-top: 5px; display: none; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .search-result-item { padding: 10px 12px; cursor: pointer; border-bottom: 1px solid #f0f0f0; transition: background 0.2s; }
+        .search-result-item:hover { background: #f0f8ff; }
+        .search-result-item:last-child { border-bottom: none; }
+        .country-name { font-weight: 600; font-size: 16px; color: #333; margin-bottom: 8px; }
+        .score-box {
+            background: linear-gradient(135deg, rgba(14, 165, 164, 0.16) 0%, rgba(15, 118, 110, 0.08) 100%);
+            padding: 16px;
+            border-radius: 14px;
+            margin: 12px 0;
+            border: 1px solid rgba(15, 118, 110, 0.2);
+        }
+        .score-label { font-size: 11px; color: var(--muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.8px; font-weight: 600; }
+        .score-value { font-size: 34px; font-weight: 700; color: var(--accent-dark); }
+        .pillar {
+            font-size: 12px;
+            margin: 8px 0;
+            padding: 10px 12px;
+            background: #f8fafc;
+            border-radius: 10px;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+            cursor: help;
+        }
+        .pillar:hover { background: #f1f5f9; border-left-color: var(--accent); transform: translateX(3px); }
+        .pillar-val { font-weight: bold; color: var(--accent-dark); float: right; font-size: 13px; }
+        .legend {
+            background: #f8fafc;
+            padding: 16px;
+            border-radius: 14px;
+            margin-top: 20px;
+            font-size: 12px;
+            border: 1px solid #e2e8f0;
+        }
+        .legend-title { font-weight: 600; margin-bottom: 10px; color: var(--ink); font-size: 13px; }
+        .legend-row { margin: 6px 0; display: flex; align-items: center; }
+        .legend-color { display: inline-block; width: 16px; height: 16px; margin-right: 8px; border: 1px solid #999; border-radius: 3px; }
+        .default { color: #999; text-align: center; padding: 20px; }
+        .loading { text-align: center; padding: 30px; color: #0066cc; font-weight: 600; }
+        .loading::after { content: '...'; animation: dots 1.5s infinite; }
+        @keyframes dots { 0%, 20% { content: '.'; } 40% { content: '..'; } 60%, 100% { content: '...'; } }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1000; justify-content: center; align-items: center; animation: fadeIn 0.2s; }
         .modal.show { display: flex; }
-        .modal-content { background: white; border-radius: 8px; padding: 20px; max-width: 600px; max-height: 80vh; overflow-y: auto; box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
-        .modal-close { float: right; cursor: pointer; font-size: 20px; font-weight: bold; color: #999; }
-        .modal-close:hover { color: #333; }
-        .modal h2 { color: #0066cc; margin-bottom: 15px; margin-top: 0; }
-        .modal h3 { color: #0066cc; margin-top: 15px; margin-bottom: 8px; font-size: 13px; }
-        .modal p { font-size: 12px; line-height: 1.5; margin-bottom: 10px; color: #333; }
-        .pillar-card { background: #f9f9f9; padding: 10px; border-radius: 4px; margin: 8px 0; border-left: 3px solid #0066cc; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .modal-content { background: white; border-radius: 18px; padding: 30px; max-width: 650px; max-height: 85vh; overflow-y: auto; box-shadow: 0 10px 40px rgba(0,0,0,0.3); animation: slideUp 0.3s; }
+        @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        .modal-close { float: right; cursor: pointer; font-size: 28px; font-weight: bold; color: #999; line-height: 1; transition: all 0.2s; }
+        .modal-close:hover { color: #dc143c; transform: rotate(90deg); }
+        .modal h2 { color: #0066cc; margin-bottom: 20px; margin-top: 0; font-size: 24px; }
+        .modal h3 { color: #0066cc; margin-top: 20px; margin-bottom: 10px; font-size: 16px; font-weight: 600; }
+        .modal p { font-size: 13px; line-height: 1.6; margin-bottom: 12px; color: #333; }
+        .pillar-card { background: #f9f9f9; padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 4px solid #0066cc; transition: all 0.2s; }
+        .pillar-card:hover { background: #f0f8ff; transform: translateX(3px); }
         .pillar-card strong { color: #0066cc; }
+        .map-overlay {
+            position: absolute;
+            left: 34px;
+            bottom: 34px;
+            background: rgba(255, 255, 255, 0.92);
+            border-radius: 14px;
+            padding: 12px 14px;
+            box-shadow: 0 12px 26px rgba(15, 23, 42, 0.2);
+            font-size: 12px;
+            color: var(--muted);
+            pointer-events: none;
+            backdrop-filter: blur(6px);
+        }
+        .map-overlay .legend-row { margin: 4px 0; }
+        @keyframes riseIn { from { transform: translateY(12px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        @media (max-width: 768px) {
+            header { flex-direction: column; align-items: flex-start; gap: 14px; }
+            header h1 { font-size: 20px; }
+            .wrapper { flex-direction: column; padding: 12px; }
+            #map { min-height: 50vh; }
+            .sidebar { width: 100%; max-height: 42vh; }
+            .map-overlay { display: none; }
+            .modal-content { padding: 20px; max-width: 90%; }
+        }
     </style>
 </head>
 <body>
 <header>
     <div>
-        <h1>🌍 Global Resilience Dashboard</h1>
-        <p>296 countries • Click to view detailed scores</p>
+        <div class="brand">
+            <div class="title-row">
+                <span class="brand-mark">🌍</span>
+                <div>
+                    <h1>Global Resilience Atlas</h1>
+                    <p>Interactive resilience benchmarks across 296 economies</p>
+                </div>
+            </div>
+            <div class="meta-pills">
+                <span class="pill">Live API 2019-2025</span>
+                <span class="pill">GDELT news pulse</span>
+                <span class="pill">Scores normalized 0-1</span>
+            </div>
+        </div>
     </div>
-    <button class="info-btn" onclick="showMethodology()">ℹ️ Info</button>
+    <button class="info-btn" onclick="showMethodology()">Methodology</button>
 </header>
 
 <div class="wrapper">
     <div id="map"></div>
+    <div class="map-overlay">
+        <div style="font-weight:600;color:#0f172a;margin-bottom:6px;">Resilience Scale</div>
+        <div class="legend-row"><span class="legend-color" style="background:#228b22;"></span>Excellent (0.65+)</div>
+        <div class="legend-row"><span class="legend-color" style="background:#ffff00;"></span>Good (0.45-0.65)</div>
+        <div class="legend-row"><span class="legend-color" style="background:#ff8c00;"></span>Fair (0.30-0.45)</div>
+        <div class="legend-row"><span class="legend-color" style="background:#dc143c;"></span>Critical (&lt;0.30)</div>
+    </div>
     <div class="sidebar">
-        <h2>Country Details</h2>
+        <h2>Country Explorer</h2>
+        <p class="helper">Search by name or click on a country to explore pillar scores.</p>
+        <div class="search-box">
+            <input type="text" id="country-search" placeholder="Search for a country..." />
+            <div id="search-results" class="search-results"></div>
+        </div>
         <div id="sidebar-content">
-            <p class="default">Click any country on the map.</p>
+            <p class="default">👆 Click any country on the map or search above</p>
             <div class="legend">
-                <div style="font-weight:bold;margin-bottom:5px;">Color Scale:</div>
-                <div class="legend-row"><span class="legend-color" style="background:#228b22;"></span><b>Green</b> 0.65+</div>
-                <div class="legend-row"><span class="legend-color" style="background:#ffff00;"></span><b>Yellow</b> 0.45-0.65</div>
-                <div class="legend-row"><span class="legend-color" style="background:#ff8c00;"></span><b>Orange</b> 0.30-0.45</div>
-                <div class="legend-row"><span class="legend-color" style="background:#dc143c;"></span><b>Red</b> &lt;0.30</div>
+                <div class="legend-title">📊 Resilience Color Scale</div>
+                <div class="legend-row"><span class="legend-color" style="background:#228b22;"></span><b>Excellent</b> (0.65+) Top 25%</div>
+                <div class="legend-row"><span class="legend-color" style="background:#ffff00;"></span><b>Good</b> (0.45-0.65) Average</div>
+                <div class="legend-row"><span class="legend-color" style="background:#ff8c00;"></span><b>Fair</b> (0.30-0.45) Below Avg</div>
+                <div class="legend-row"><span class="legend-color" style="background:#dc143c;"></span><b>Critical</b> (&lt;0.30) Needs Attention</div>
+                <div style="margin-top:10px;padding-top:10px;border-top:1px solid #e0e0e0;font-size:11px;color:#666;">💡 Tip: Hover over pillars for details</div>
             </div>
         </div>
     </div>
@@ -75,37 +241,37 @@
         <p>Average of four resilience pillars (Financial, Social, Institutional, Infrastructure). Normalized to 0-1 scale where 0.5 = global average.</p>
         
         <h3>📊 Normalization Method</h3>
-        <p><strong>Z-Score → Percentile:</strong> Raw World Bank indicators are converted to z-scores, then mapped to cumulative normal distribution (CDF) percentiles. This produces scores where 0.5 is the global median and values represent relative global standing.</p>
+        <p><strong>Min-Max Scaling:</strong> Each indicator is scaled to 0-1 across all countries for 2019-2025, with inversions where lower is better (e.g., debt, Gini, slum share).</p>
         
-        <h3>💰 Financial Resilience (18% Green)</h3>
+        <h3>💰 Financial Resilience</h3>
         <div class="pillar-card">
-            <strong>Indicators:</strong> GDP per capita, Tax revenue %, Gross savings %
-            <p style="margin-top:5px;"><strong>Why lower?</strong> Many countries lack consistent tax collection and savings infrastructure. This pillar depends on economic development metrics that vary significantly worldwide.</p>
+            <strong>Indicators:</strong> GDP, Debt-to-GDP, FX reserves, FDI inflows, Portfolio inflows (FII proxy)
+            <p style="margin-top:5px;"><strong>Source:</strong> World Bank Open Data API</p>
         </div>
         
-        <h3>👥 Social Resilience (47% Green)</h3>
+        <h3>👥 Social Resilience</h3>
         <div class="pillar-card">
-            <strong>Indicators:</strong> Life expectancy, Primary enrollment %, Health spending per capita
-            <p style="margin-top:5px;"><strong>Moderate distribution:</strong> Health and education progress vary by region; wealthier countries dominate top percentiles.</p>
+            <strong>Indicators:</strong> Gini, Household consumption per capita, Gross savings, Drinking water access, Slum population (housing proxy)
+            <p style="margin-top:5px;"><strong>Source:</strong> World Bank Open Data API</p>
         </div>
         
-        <h3>🏛️ Institutional Resilience (38% Green)</h3>
+        <h3>🏛️ Institutional Resilience</h3>
         <div class="pillar-card">
-            <strong>Indicators:</strong> Control of Corruption, Government Effectiveness, Political Stability
-            <p style="margin-top:5px;"><strong>Governance challenges:</strong> Based on World Governance Indicators (WGI). Many countries struggle with corruption and institutional capacity.</p>
+            <strong>Indicators:</strong> Control of Corruption, Government Effectiveness, Voice & Accountability, Political Stability
+            <p style="margin-top:5px;"><strong>Source:</strong> World Bank WGI via Open Data API</p>
         </div>
         
-        <h3>🌐 Infrastructure Resilience (54% Green)</h3>
+        <h3>🌐 Infrastructure Resilience</h3>
         <div class="pillar-card">
-            <strong>Indicators:</strong> Electricity access %, Internet users %, Water access %
-            <p style="margin-top:5px;"><strong>Why highest?</strong> These are coverage metrics that hit saturation in many countries. Once electricity/water are nearly universal (95%+), further improvements are marginal. This creates higher scores globally compared to financial indicators where variation is wide.</p>
+            <strong>Indicators:</strong> Road density, Paved roads, Port container traffic, Electricity access, Internet users
+            <p style="margin-top:5px;"><strong>Source:</strong> World Bank Open Data API</p>
         </div>
         
         <h3>📈 Data Source & Period</h3>
-        <p><strong>Source:</strong> World Bank Open Data API (15 indicators across 4 pillars)</p>
-        <p><strong>Historical:</strong> 2016-2022 (latest available data)</p>
-        <p><strong>Forecast:</strong> 2023-2025 (BSTS+DFM model with mean reversion)</p>
-        <p><strong>Countries:</strong> 296 with sufficient data</p>
+        <p><strong>Source:</strong> Live World Bank Open Data API (20 indicators across 4 pillars)</p>
+        <p><strong>Period:</strong> 2019-2025 (latest available value per country)</p>
+        <p><strong>Countries:</strong> All with sufficient data coverage</p>
+        <p><strong>Live Pulse:</strong> GDELT event monitoring (last 24 hours)</p>
         
         <h3>🔄 How to Read Scores</h3>
         <p><strong>0.65+:</strong> Top 25% - Advanced resilience across multiple dimensions</p>
@@ -119,6 +285,10 @@
 console.log('=== RESILIENCE MAP ===');
 
 let countriesData = {};
+let countryMeta = {};
+let selectedIso = null;
+let geoLayer = null;
+let iso2ToIso3 = {};
 
 // Initialize map
 const map = L.map('map').setView([20, 0], 2);
@@ -135,16 +305,31 @@ function getColor(score) {
     return '#228b22';
 }
 
+function getFeatureIso3(feature) {
+    return feature.properties.ISO_A3 || feature.properties['ISO3166-1-Alpha-3'];
+}
+
 function showCountry(country) {
+    const baseScore = country.score || 0;
+    const dynamicScore = country.dynamicScore ?? baseScore;
+    const scoreLevel = dynamicScore >= 0.65 ? 'Excellent' : dynamicScore >= 0.45 ? 'Good' : dynamicScore >= 0.30 ? 'Fair' : 'Critical';
+    const scoreColor = getColor(dynamicScore);
     const html = `
+        <div class="country-name">${country.name}</div>
         <div class="score-box">
-            <div class="score-label">OVERALL RESILIENCE</div>
-            <div class="score-value">${country.score.toFixed(3)}</div>
+            <div class="score-label">DYNAMIC RESILIENCE SCORE</div>
+            <div class="score-value" style="color:${scoreColor}">${dynamicScore.toFixed(3)}</div>
+            <div style="font-size:11px;color:#666;margin-top:5px;">Rating: <strong>${scoreLevel}</strong></div>
+            <div style="font-size:11px;color:#666;margin-top:4px;">Baseline: ${baseScore.toFixed(3)}</div>
         </div>
-        <div class="pillar"><b>💰 Financial:</b> <span class="pillar-val">${country.financial.toFixed(3)}</span></div>
-        <div class="pillar"><b>👥 Social:</b> <span class="pillar-val">${country.social.toFixed(3)}</span></div>
-        <div class="pillar"><b>🏛️ Institutional:</b> <span class="pillar-val">${country.institutional.toFixed(3)}</span></div>
-        <div class="pillar"><b>🌐 Infrastructure:</b> <span class="pillar-val">${country.infrastructure.toFixed(3)}</span></div>
+        <div class="pillar" title="GDP, Debt-to-GDP, FX reserves, FDI, Portfolio inflows"><b>💰 Financial</b> <span class="pillar-val">${country.financial.toFixed(3)}</span></div>
+        <div class="pillar" title="Gini, Consumption, Savings, Water access, Housing proxy"><b>👥 Social</b> <span class="pillar-val">${country.social.toFixed(3)}</span></div>
+        <div class="pillar" title="Corruption control, Government effectiveness, Voice, Stability"><b>🏛️ Institutional</b> <span class="pillar-val">${country.institutional.toFixed(3)}</span></div>
+        <div class="pillar" title="Roads, Ports, Electricity, Internet"><b>🌐 Infrastructure</b> <span class="pillar-val">${country.infrastructure.toFixed(3)}</span></div>
+        <div class="pillar" title="News intensity from GDELT events in the past 24 hours"><b>📰 Media Pulse</b> <span class="pillar-val">${(country.newsIntensity ?? 0).toFixed(3)}</span></div>
+        <div style="margin-top:15px;padding:10px;background:#f0f8ff;border-radius:6px;font-size:11px;color:#666;">
+            💡 <strong>Quick Info:</strong> ${country.region || 'N/A'} • ${country.income || 'N/A'}
+        </div>
     `;
     document.getElementById('sidebar-content').innerHTML = html;
 }
@@ -157,20 +342,302 @@ function closeMethodology() {
     document.getElementById('methodology-modal').classList.remove('show');
 }
 
-// Load countries data
-console.log('Loading countries_full.json...');
-fetch('countries_full.json')
-    .then(r => {
-        console.log('Response:', r.status);
-        if (!r.ok) throw new Error('HTTP ' + r.status);
-        return r.json();
-    })
-    .then(data => {
-        countriesData = data;
-        console.log('✓ Loaded', Object.keys(countriesData).length, 'countries');
+// Search functionality
+const searchInput = document.getElementById('country-search');
+const searchResults = document.getElementById('search-results');
+
+searchInput.addEventListener('input', (e) => {
+    const query = e.target.value.toLowerCase().trim();
+    if (query.length < 2) {
+        searchResults.style.display = 'none';
+        return;
+    }
+    
+    const matches = Object.values(countriesData)
+        .filter(c => c.name.toLowerCase().includes(query))
+        .slice(0, 5);
+    
+    if (matches.length > 0) {
+        searchResults.innerHTML = matches.map(c => 
+            `<div class="search-result-item" onclick="selectCountry('${c.iso}')">
+                <div style="font-weight:600;">${c.name}</div>
+                <div style="font-size:11px;color:#666;">Score: ${(c.dynamicScore ?? c.score).toFixed(3)}</div>
+            </div>`
+        ).join('');
+        searchResults.style.display = 'block';
+    } else {
+        searchResults.innerHTML = '<div style="padding:10px;color:#999;">No results found</div>';
+        searchResults.style.display = 'block';
+    }
+});
+
+function selectCountry(iso) {
+    const country = countriesData[iso];
+    if (country) {
+        selectedIso = iso;
+        showCountry(country);
+        searchResults.style.display = 'none';
+        searchInput.value = '';
+        // Try to zoom to country if possible
+        if (country.lat && country.lon) {
+            map.setView([country.lat, country.lon], 4);
+        }
+    }
+}
+
+const WB_BASE = 'https://api.worldbank.org/v2';
+const DATE_RANGE = '2019:2025';
+const AGGREGATES = new Set(['WLD', 'EAS', 'ECS', 'LCN', 'MEA', 'NAC', 'SAS', 'SSF', 'ARB', 'HIC', 'LIC', 'LMC', 'UMC', 'EUU']);
+const GDELT_KEYWORDS = [
+    'earthquake', 'flood', 'hurricane', 'drought', 'wildfire', 'conflict', 'protest',
+    'inflation', 'debt', 'bank', 'default', 'currency', 'outage', 'cyber', 'port', 'strike'
+];
+const GDELT_WINDOW_HOURS = 24;
+const PILLARS = {
+    financial: {
+        gdp: { code: 'NY.GDP.MKTP.CD', reverse: false },
+        debt_to_gdp: { code: 'GC.DOD.TOTL.GD.ZS', reverse: true },
+        fx_reserves: { code: 'FI.RES.XGLD.MO', reverse: false },
+        fdi: { code: 'BX.KLT.DINV.WD.GD.ZS', reverse: false },
+        fii: { code: 'BN.KLT.PTXL.CD', reverse: false }
+    },
+    social: {
+        gini: { code: 'SI.POV.GINI', reverse: true },
+        consumption: { code: 'NE.CON.PRVT.PC.KD', reverse: false },
+        savings: { code: 'NY.GNS.ICTR.ZS', reverse: false },
+        water: { code: 'SH.H2O.BASW.ZS', reverse: false },
+        housing_proxy: { code: 'EN.POP.SLUM.UR.ZS', reverse: true }
+    },
+    institutional: {
+        corruption_control: { code: 'CC.EST', reverse: false },
+        govt_effectiveness: { code: 'GE.EST', reverse: false },
+        voice_accountability: { code: 'VA.EST', reverse: false },
+        political_stability: { code: 'PV.EST', reverse: false }
+    },
+    infrastructure: {
+        road_density: { code: 'IS.ROD.DNST.K2', reverse: false },
+        paved_roads: { code: 'IS.ROD.PAVE.ZS', reverse: false },
+        port_traffic: { code: 'IS.SHP.GCNW.XQ', reverse: false },
+        electricity: { code: 'EG.ELC.ACCS.ZS', reverse: false },
+        internet: { code: 'IT.NET.USER.ZS', reverse: false }
+    }
+};
+
+async function fetchIndicatorLatest(code) {
+    const url = `${WB_BASE}/country/all/indicator/${code}?format=json&date=${DATE_RANGE}&per_page=20000`;
+    const response = await fetch(url);
+    if (!response.ok) {
+        throw new Error(`World Bank API ${code} HTTP ${response.status}`);
+    }
+    const payload = await response.json();
+    const rows = payload[1] || [];
+    const latest = {};
+    rows.forEach(row => {
+        if (!row || row.value === null) return;
+        const iso = row.countryiso3code;
+        if (!iso) return;
+        const year = Number(row.date);
+        if (!latest[iso] || year > latest[iso].year) {
+            latest[iso] = { value: Number(row.value), year };
+        }
+        if (!countryMeta[iso] && row.country && row.country.value) {
+            countryMeta[iso] = { name: row.country.value };
+        }
+    });
+    return latest;
+}
+
+function normalize(value, min, max, reverse) {
+    if (value === null || value === undefined) return 0;
+    if (max === min) return 0.5;
+    let score = (value - min) / (max - min);
+    if (reverse) score = 1 - score;
+    return Math.max(0, Math.min(1, score));
+}
+
+function formatGdeltDate(date) {
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${date.getUTCFullYear()}${pad(date.getUTCMonth() + 1)}${pad(date.getUTCDate())}${pad(date.getUTCHours())}${pad(date.getUTCMinutes())}${pad(date.getUTCSeconds())}`;
+}
+
+async function fetchGdeltPulse() {
+    const end = new Date();
+    const start = new Date(end.getTime() - GDELT_WINDOW_HOURS * 60 * 60 * 1000);
+    const query = GDELT_KEYWORDS.join(' OR ');
+    const url = `https://api.gdeltproject.org/api/v2/events/search?query=${encodeURIComponent(query)}&format=json&maxrecords=250&sort=DateDesc&startdatetime=${formatGdeltDate(start)}&enddatetime=${formatGdeltDate(end)}`;
+    const response = await fetch(url);
+    if (!response.ok) {
+        throw new Error(`GDELT HTTP ${response.status}`);
+    }
+    const payload = await response.json();
+    return payload.events || [];
+}
+
+function applyGdeltPulse(events) {
+    const counts = {};
+    const toneSums = {};
+    events.forEach(event => {
+        const iso3 = (event.ActionGeo_CountryCode3 || '').trim();
+        const iso2Raw = event.ActionGeo_CountryCode || event.Actor1CountryCode || event.Actor2CountryCode;
+        const iso2 = iso2Raw === 'UK' ? 'GB' : iso2Raw;
+        const mappedIso3 = iso2 ? iso2ToIso3[iso2] : null;
+        const key = iso3 || mappedIso3;
+        if (!key) return;
+        counts[key] = (counts[key] || 0) + 1;
+        const tone = Number(event.AvgTone || event.Tone || 0);
+        toneSums[key] = (toneSums[key] || 0) + (Number.isFinite(tone) ? tone : 0);
+    });
+
+    const intensityValues = Object.values(counts);
+    const maxCount = intensityValues.length ? Math.max(...intensityValues) : 1;
+
+    Object.entries(countriesData).forEach(([iso, country]) => {
+        const count = counts[iso] || 0;
+        const avgTone = count ? toneSums[iso] / count : 0;
+        const intensity = maxCount > 0 ? Math.log1p(count) / Math.log1p(maxCount) : 0;
+        const sentiment = Math.max(-1, Math.min(1, avgTone / 10));
+        const impact = intensity * sentiment * 0.15;
+        const base = country.score || 0;
+        country.newsIntensity = intensity;
+        country.dynamicScore = Math.max(0, Math.min(1, base + impact));
+    });
+}
+
+function refreshMapStyles() {
+    if (!geoLayer) return;
+    geoLayer.setStyle(feature => {
+        const iso = getFeatureIso3(feature);
+        const country = countriesData[iso];
+        const score = country ? (country.dynamicScore ?? country.score) : null;
+        return {
+            fillColor: getColor(score),
+            weight: 0.5,
+            opacity: 1,
+            color: '#555',
+            fillOpacity: 0.8
+        };
+    });
+}
+
+function refreshPopups() {
+    if (!geoLayer) return;
+    geoLayer.eachLayer(layer => {
+        const feature = layer.feature;
+        if (!feature) return;
+        const iso = getFeatureIso3(feature);
+        const country = countriesData[iso];
+        if (country) {
+            layer.bindPopup('<b>' + country.name + '</b><br>Score: ' + (country.dynamicScore ?? country.score).toFixed(3));
+        }
+    });
+}
+
+async function loadGdeltPulse() {
+    try {
+        const events = await fetchGdeltPulse();
+        applyGdeltPulse(events);
+        refreshMapStyles();
+        refreshPopups();
+        if (selectedIso && countriesData[selectedIso]) {
+            showCountry(countriesData[selectedIso]);
+        }
+        console.log('✓ GDELT pulse applied');
+    } catch (err) {
+        console.warn('GDELT pulse failed:', err);
+    }
+}
+
+async function loadCountryMeta() {
+    try {
+        const response = await fetch('resilience_data_cleaned.json');
+        if (!response.ok) return;
+        const data = await response.json();
+        data.forEach(entry => {
+            if (entry.iso3) {
+                countryMeta[entry.iso3] = {
+                    name: entry.name,
+                    region: entry.region,
+                    income: entry.income,
+                    lat: entry.lat,
+                    lon: entry.lon
+                };
+            }
+        });
+    } catch (err) {
+        console.warn('Country meta load failed:', err);
+    }
+}
+
+// Show loading state
+document.getElementById('sidebar-content').innerHTML = '<div class="loading">Loading data</div>';
+
+console.log('Loading live World Bank data...');
+Promise.resolve()
+    .then(loadCountryMeta)
+    .then(async () => {
+        const indicatorResults = {};
+        const stats = {};
+        const fetchTasks = [];
+
+        Object.entries(PILLARS).forEach(([pillar, indicators]) => {
+            Object.entries(indicators).forEach(([key, info]) => {
+                fetchTasks.push(
+                    fetchIndicatorLatest(info.code).then(data => {
+                        indicatorResults[key] = { data, reverse: info.reverse, pillar };
+                        const values = Object.values(data).map(entry => entry.value).filter(v => Number.isFinite(v));
+                        const min = values.length ? Math.min(...values) : 0;
+                        const max = values.length ? Math.max(...values) : 1;
+                        stats[key] = { min, max };
+                    })
+                );
+            });
+        });
+
+        await Promise.all(fetchTasks);
+
+        const allCountries = new Set();
+        Object.values(indicatorResults).forEach(entry => {
+            Object.keys(entry.data).forEach(iso => allCountries.add(iso));
+        });
+
+        allCountries.forEach(iso => {
+            if (AGGREGATES.has(iso)) return;
+            const pillarScores = {};
+            Object.entries(PILLARS).forEach(([pillar, indicators]) => {
+                const scores = [];
+                Object.keys(indicators).forEach(key => {
+                    const entry = indicatorResults[key];
+                    const dataPoint = entry?.data?.[iso];
+                    if (!dataPoint) return;
+                    const stat = stats[key];
+                    scores.push(normalize(dataPoint.value, stat.min, stat.max, entry.reverse));
+                });
+                pillarScores[pillar] = scores.length ? scores.reduce((a, b) => a + b, 0) / scores.length : 0;
+            });
+
+            const overallScores = Object.values(pillarScores).filter(score => score > 0);
+            const overall = overallScores.length ? overallScores.reduce((a, b) => a + b, 0) / overallScores.length : 0;
+
+            const meta = countryMeta[iso] || {};
+
+            countriesData[iso] = {
+                iso,
+                name: meta.name || iso,
+                region: meta.region || '',
+                income: meta.income || '',
+                lat: meta.lat,
+                lon: meta.lon,
+                score: overall,
+                financial: pillarScores.financial || 0,
+                social: pillarScores.social || 0,
+                institutional: pillarScores.institutional || 0,
+                infrastructure: pillarScores.infrastructure || 0
+            };
+        });
+
+        console.log('✓ Processed', Object.keys(countriesData).length, 'countries');
         console.log('Sample USA:', countriesData['USA']);
-        
-        // Load and render GeoJSON
+
         console.log('Loading world.geojson...');
         return fetch('world.geojson');
     })
@@ -181,14 +648,23 @@ fetch('countries_full.json')
     })
     .then(geojson => {
         console.log('✓ GeoJSON loaded:', geojson.features.length, 'features');
+
+        iso2ToIso3 = {};
+        geojson.features.forEach(feature => {
+            const iso2 = feature.properties['ISO3166-1-Alpha-2'];
+            const iso3 = getFeatureIso3(feature);
+            if (iso2 && iso3) {
+                iso2ToIso3[iso2] = iso3;
+            }
+        });
         
         let colored = 0, uncolored = 0;
         
-        L.geoJSON(geojson, {
+        geoLayer = L.geoJSON(geojson, {
             style: (feature) => {
-                const iso = feature.properties.ISO_A3;
+                const iso = getFeatureIso3(feature);
                 const country = countriesData[iso];
-                const score = country ? country.score : null;
+                const score = country ? (country.dynamicScore ?? country.score) : null;
                 
                 if (score) colored++;
                 else uncolored++;
@@ -202,13 +678,14 @@ fetch('countries_full.json')
                 };
             },
             onEachFeature: (feature, layer) => {
-                const iso = feature.properties.ISO_A3;
+                const iso = getFeatureIso3(feature);
                 const country = countriesData[iso];
                 
                 if (country) {
-                    layer.bindPopup('<b>' + country.name + '</b><br>Score: ' + country.score.toFixed(3));
+                    layer.bindPopup('<b>' + country.name + '</b><br>Score: ' + (country.dynamicScore ?? country.score).toFixed(3));
                     layer.on('click', () => {
                         console.log('Clicked:', country.name);
+                        selectedIso = iso;
                         showCountry(country);
                     });
                 }
@@ -216,6 +693,8 @@ fetch('countries_full.json')
         }).addTo(map);
         
         console.log('✓ Map rendered -', colored, 'colored,', uncolored, 'uncolored');
+        loadGdeltPulse();
+        setInterval(loadGdeltPulse, 10 * 60 * 1000);
     })
     .catch(err => {
         console.error('ERROR:', err);

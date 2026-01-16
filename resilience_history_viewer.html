@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Global Resilience History (2019-2026)</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            font-size: 48px;
+            font-weight: 800;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+        
+        .header .subtitle {
+            font-size: 18px;
+            opacity: 0.95;
+        }
+        
+        .dashboard {
+            max-width: 1600px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        
+        .card.full-width {
+            grid-column: 1 / -1;
+        }
+        
+        .card h2 {
+            font-size: 24px;
+            margin-bottom: 20px;
+            color: #1f2937;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .card-icon {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .stat-box {
+            text-align: center;
+            padding: 20px;
+            background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+            border-radius: 12px;
+        }
+        
+        .stat-value {
+            font-size: 36px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            font-size: 12px;
+            color: #6b7280;
+            text-transform: uppercase;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 400px;
+        }
+        
+        .country-selector {
+            margin-bottom: 20px;
+        }
+        
+        .country-selector select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e5e7eb;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            color: #1f2937;
+            background: white;
+            cursor: pointer;
+        }
+        
+        .country-selector select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .trend-indicator {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 10px;
+            padding: 15px;
+            background: #f9fafb;
+            border-radius: 10px;
+        }
+        
+        .trend-arrow {
+            font-size: 24px;
+        }
+        
+        .trend-text {
+            font-size: 14px;
+            font-weight: 600;
+        }
+        
+        .trend-up { color: #059669; }
+        .trend-down { color: #dc2626; }
+        .trend-stable { color: #f59e0b; }
+        
+        .legend {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 20px;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+        
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #6b7280;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🌍 Global Resilience: History & Forecast</h1>
+        <div class="subtitle">Historical data (2019-2026) and DFM+BSTS Model Forecasts (2027-2030)</div>
+    </div>
+    
+    <div class="dashboard">
+        <!-- Global Overview Stats -->
+        <div class="card full-width">
+            <h2>
+                <div class="card-icon">📊</div>
+                Global Overview (2019-2030)
+            </h2>
+            <div class="stats-grid">
+                <div class="stat-box">
+                    <div class="stat-value" id="stat-current">-</div>
+                    <div class="stat-label">Current Score (2026)</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value" id="stat-forecast">-</div>
+                    <div class="stat-label">Forecast 2030</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value" id="stat-change">-</div>
+                    <div class="stat-label">Total Change (2019-2030)</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value" id="stat-countries">324</div>
+                    <div class="stat-label">Countries Tracked</div>
+                </div>
+            </div>
+            <div style="text-align: center; padding: 10px; background: #f3f4f6; border-radius: 8px; margin-bottom: 20px;">
+                <div style="font-size: 13px; color: #6b7280; font-weight: 600;">
+                    📈 Forecasting Model: <span style="color: #667eea;">Dynamic Factor Model (DFM) + Bayesian Structural Time Series (BSTS)</span>
+                </div>
+            </div>
+            <div class="chart-container">
+                <canvas id="globalTrendChart"></canvas>
+            </div>
+        </div>
+        
+        <!-- Pillar Breakdown -->
+        <div class="card">
+            <h2>
+                <div class="card-icon">🏛️</div>
+                Resilience Pillars Over Time
+            </h2>
+            <div class="chart-container">
+                <canvas id="pillarChart"></canvas>
+            </div>
+            <div class="legend">
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #3b82f6;"></div>
+                    Financial
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #8b5cf6;"></div>
+                    Social
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #ec4899;"></div>
+                    Infrastructure
+                </div>
+            </div>
+        </div>
+        30
+        <!-- Regional Comparison -->
+        <div class="card">
+            <h2>
+                <div class="card-icon">🌐</div>
+                Regional Progress (2019 → 2026)
+            </h2>
+            <div class="chart-container">
+                <canvas id="regionalChart"></canvas>
+            </div>
+        </div>
+        
+        <!-- Country Deep Dive -->
+        <div class="card full-width">
+            <h2>
+                <div class="card-icon">🔍</div>
+                Country Deep Dive
+            </h2>
+            <div class="country-selector">
+                <select id="countrySelect">
+                    <option value="">Loading countries...</option>
+                </select>
+            </div>
+            <div class="chart-container">
+                <canvas id="countryChart"></canvas>
+            </div>
+            <div id="trendIndicator"></div>
+        </div>
+    </div>
+
+    <script>
+        let timelineData = [];
+        let globalTrendChart, pillarChart, regionalChart, countryChart;
+
+        // Load data
+        fetch('resilience_timeline_2019_2030.json')
+            .then(res => res.json())
+            .then(data => {
+                timelineData = data.filter(d => d.name && d.timeline);
+                initializeDashboard();
+            });
+
+        function initializeDashboard() {
+            calculateGlobalStats();
+            createGlobalTrendChart();
+            createPillarChart();
+            createcurrentYear = '2026';
+            const forecastYear = '2030';
+            const startYear = '2019';
+            
+            let currentScores = [];
+            let forecastScores = [];
+            let startScores = [];
+            
+            timelineData.forEach(country => {
+                if (country.timeline[currentYear]?.overall) {
+                    currentScores.push(country.timeline[currentYear].overall);
+                }
+                if (country.timeline[forecastYear]?.overall) {
+                    forecastScores.push(country.timeline[forecastYear].overall);
+                }
+                if (country.timeline[startYear]?.overall) {
+                    startScores.push(country.timeline[startYear].overall);
+                }
+            });
+            
+            const currentAvg = currentScores.reduce((a, b) => a + b, 0) / currentScores.length;
+            const forecastAvg = forecastScores.reduce((a, b) => a + b, 0) / forecastScores.length;
+            const startAvg = startScores.reduce((a, b) => a + b, 0) / startScores.length;
+            const change = forecastAvg - startAvg;
+            
+            document.getElementById('stat-current').textContent = currentAvg.toFixed(3);
+            document.getElementById('stat-forecast').textContent = forecas / currentScores.length;
+            const historicalYears = ['2019', '2020', '2021', '2022', '2023', '2024', '2025', '2026'];
+            const forecastYears = ['2027', '2028', '2029', '2030'];
+            const allYears = [...historicalYears, ...forecastYears];
+            
+            const historicalData = historicalYears.map(year => {
+                const scores = timelineData
+                    .map(c => c.timeline[year]?.overall)
+                    .filter(s => s);
+                return scores.reduce((a, b) => a + b, 0) / scores.length;
+            });
+            
+            const forecastData = forecastYears.map(year => {
+                const scores = timelineData
+                    .map(c => c.timeline[year]?.overall)
+                    .filter(s => s);
+                return scores.reduce((a, b) => a + b, 0) / scores.length;
+            });
+
+            const ctx = document.getElementById('globalTrendChart').getContext('2d');
+            globalTrendChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: allYears,
+                    datasets: [
+                        {
+                            label: 'Historical Data (2019-2026)',
+                            data: [...historicalData, null, null, null, null],
+                            borderColor: 'rgb(102, 126, 234)',
+                            backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                            borderWidth: 3,
+                            fill: true,
+                            tension: 0.4,
+                            pointRadius: 6,
+                            pointHoverRadius: 8,
+                            pointBackgroundColor: 'rgb(102, 126, 234)',
+                            pointBorderColor: 'white',
+                            pointBorderWidth: 2
+                        },
+                            display: true,
+                            position: 'top',
+                            labels: { font: { size: 13, weight: 'bold' } }
+                       
+                        {
+                            label: 'DFM+BSTS Forecast (2027-2030)',
+                            data: [null, null, null, null, null, null, null, historicalData[historicalData.length - 1], ...forecastData],
+                            borderColor: 'rgb(34, 197, 94)',
+                            backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                            borderWidth: 3,
+                            borderDash: [5, 5],
+                            fill: true,
+                            tension: 0.4,
+                            pointRadius: 6,
+                            pointHoverRadius: 8,
+                            pointBackgroundColor: 'rgb(34, 197, 94)',
+                            pointBorderColor: 'white',
+                            pointBorderWidth: 2
+                        }
+                       borderColor: 'rgb(102, 126, 234)',
+                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 6,
+                  historicalYears = ['2019', '2020', '2021', '2022', '2023', '2024', '2025', '2026'];
+            const forecastYears = ['2027', '2028', '2029', '2030'];
+            const allYears = [...historicalYears, ...forecastYears];
+            const pillars = ['financial', 'social', 'infrastructure'];
+            
+            const datasets = pillars.flatMap((pillar, idx) => {
+                const colors = ['rgb(59, 130, 246)', 'rgb(139, 92, 246)', 'rgb(236, 72, 153)'];
+                
+                const historicalData = historicalYears.map(year => {
+                    const scores = timelineData
+                        .map(c => c.timeline[year]?.[pillar])
+                        .filter(s => s);
+                    return scores.reduce((a, b) => a + b, 0) / scores.length;
+                });
+                
+                const forecastData = forecastYears.map(year => {
+                    const scores = timelineData
+                        .map(c => c.timeline[year]?.[pillar])
+                        .filter(s => s);
+                    return scores.reduce((a, b) => a + b, 0) / scores.length;
+                });
+                
+                return [
+                    {
+                        label: pillar.charAt(0).toUpperCase() + pillar.slice(1) + ' (Historical)',
+                        data: [...historicalData, null, null, null, null],
+                        borderColor: colors[idx],
+                        backgrouallYears, datasets: datasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { 
+                            display: true,
+                            position: 'top',
+                            labels: { 
+                                font: { size: 10 },
+                                boxWidth: 20,
+                                padding: 8
+                            }
+                       
+                    {
+                        label: pillar.charAt(0).toUpperCase() + pillar.slice(1) + ' (Forecast)',
+                        data: [null, null, null, null, null, null, null, historicalData[historicalData.length - 1], ...forecastData],
+                        borderColor: colors[idx],
+                        backgroundColor: colors[idx].replace(')', ', 0.05)').replace('rgb', 'rgba'),
+                        borderWidth: 2,
+                        borderDash: [5, 5],
+                        fill: false,
+                        tension: 0.4,
+                        pointRadius: 4
+                    }
+                ]           min: 0.5, vs 2030
+            const regionData = {};
+            
+            timelineData.forEach(country => {
+                const region = country.region || 'Unknown';
+                if (!regionData[region]) {
+                    regionData[region] = { start: [], current: [], forecast: [] };
+                }
+                if (country.timeline['2019']?.overall) {
+                    regionData[region].start.push(country.timeline['2019'].overall);
+                }
+                if (country.timeline['2026']?.overall) {
+                    regionData[region].current.push(country.timeline['2026'].overall);
+                }
+                if (country.timeline['2030']?.overall) {
+                    regionData[region].forecast.push(country.timeline['2030'].overall);
+                }
+            });
+
+            const regions = Object.keys(regionData).filter(r => r !== 'Unknown' && regionData[r].start.length > 5);
+            const startData = regions.map(r => {
+                const scores = regionData[r].start;
+                return scores.reduce((a, b) => a + b, 0) / scores.length;
+            });
+            const currentData = regions.map(r => {
+                const scores = regionData[r].current;
+                return scores.reduce((a, b) => a + b, 0) / scores.length;
+            });
+            const forecastData = regions.map(r => {
+                const scores = regionData[r].forecastr]?.[pillar])
+                        .filter(s => s);
+                    return scores.reduce((a, b) => a + b, 0) / scores.length;
+                });
+                
+                return {
+                    label: pillar.charAt(0).toUpperCase() + pillar.slice(1),
+                    data: data,
+                    borderColor: colors[idx],
+                    backgroundColor: colors[idx].replace(')', ', 0.1)').replace('rgb', 'rgba'),
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 4
+                };
+            }); (Current)',
+                            data: currentData,
+                            backgroundColor: 'rgba(102, 126, 234, 0.8)',
+                            borderRadius: 6
+                        },
+                        {
+                            label: '2030 (Forecast)',
+                            data: forecastData,
+                            backgroundColor: 'rgba(34, 197, 9getContext('2d');
+            pillarChart = new Chart(ctx, {
+                type: 'line',
+                data: { labels: years, datasets: datasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            padding: 12
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            min: 0.4,
+                            max: 0.8,
+                            grid: { color: 'rgba(0, 0, 0, 0.05)' }
+                        },
+                        x: { grid: { display: false } }
+                    }
+                }
+            });
+        }
+
+        function createRegionalChart() {
+            // Group by region and calculate 2019 vs 2026
+            const regionData = {};
+            
+            timelineData.forEach(country => {
+                const region = country.region || 'Unknown';
+                if (!regionData[region]) {
+                    regionData[region] = { start: [], end: [] };
+                }
+                if (country.timeline['2019']?.overall) {
+                    regionData[region].start.push(country.timeline['2019'].overall);
+                }
+                if (country.timeline['2026']?.overall) {
+                    regionData[region].end.push(country.timeline['2026'].overall);
+                }
+            });
+
+            const historicalYears = ['2019', '2020', '2021', '2022', '2023', '2024', '2025', '2026'];
+            const forecastYears = ['2027', '2028', '2029', '2030'];
+            const allYears = [...historicalYears, ...forecastYears];
+            
+            const overallHistorical = historicalYears.map(y => country.timeline[y]?.overall || null);
+            const overallForecast = forecastYears.map(y => country.timeline[y]?.overall || null);
+            
+            const financialHistorical = historicalYears.map(y => country.timeline[y]?.financial || null);
+            const financialForecast = forecastYears.map(y => country.timeline[y]?.financial || null);
+            
+            const socialHistorical = historicalYears.map(y => country.timeline[y]?.social || null);
+            const socialForecast = forecastYears.map(y => country.timeline[y]?.social || null);
+            
+            const infraHistorical = historicalYears.map(y => country.timeline[y]?.infrastructure || null);
+            const infraForecast = forecastYears.map(y => country.timeline[y]?.infrastructure || null);
+
+            if (countryChart) countryChart.destroy();
+
+            const ctx = document.getElementById('countryChart').getContext('2d');
+            countryChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: allYears,
+                    datasets: [
+                        {
+                            label: 'Overall (Historical)',
+                            data: [...overallHistorical, null, null, null, null],
+                            borderColor: 'rgb(102, 126, 234)',
+                            backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                            borderWidth: 3,
+                            fill: true,
+                            tension: 0.4,
+                            pointRadius: 5
+                        },
+                        {
+                            label: 'Overall (Forecast)',
+                            data: [null, null, null, null, null, null, null, overallHistorical[overallHistorical.length - 1], ...overallForecast],
+                            borderColor: 'rgb(34, 197, 94)',
+                            backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                            borderWidth: 3,
+                            borderDash: [5, 5],
+                            fill: true,
+                            tension: 0.4,
+                            pointRadius: 5
+                        },
+                        {
+                            label: 'Financial',
+                            data: [...financialHistorical, ...financialForecast],
+                            borderColor: 'rgb(59, 130, 246)',
+                            borderWidth: 2,
+                            tension: 0.4,
+                            pointRadius: 3,
+                            segment: {
+                                borderDash: ctx => ctx.p0DataIndex >= 7 ? [3, 3] : []
+                            }
+                        },
+                        {
+                            label: 'Social',
+                            data: [...socialHistorical, ...socialForecast],
+                            borderColor: 'rgb(139, 92, 246)',
+                            borderWidth: 2,
+                            tension: 0.4,
+                            pointRadius: 3,
+                            segment: {
+                                borderDash: ctx => ctx.p0DataIndex >= 7 ? [3, 3] : []
+                            }
+                        },
+                        {
+                            label: 'Infrastructure',
+                            data: [...infraHistorical, ...infraForecast],
+                            borderColor: 'rgb(236, 72, 153)',
+                            borderWidth: 2,
+                            tension: 0.4,
+                            pointRadius: 3,
+                            segment: {
+                                borderDash: ctx => ctx.p0DataIndex >= 7 ? [3, 3] : []
+                            }ay: false } }
+                    }
+                }
+            });
+        }
+
+        function populateCountrySelector() {
+            const select = document.getElementById('countrySelect');
+            const countries = timelineData
+                .filter(c => c.name && c.name.length > 2)
+                .sort((a, b) => a.name.localeCompare(b.name));
+            
+            select.innerHTML = '<option value="">Select a country...</option>' +
+                countries.map((c, idx) => `<option value="${idx}">${c.name}</option>`).join('');
+            
+            select.addEventListener('change', (e) => {
+                if (e.target.value) {
+                    updateCountryChart(countries[e.target.value]);
+                }
+            });
+            
+            // Select first country by default
+            if (countries.length > 0) {
+                select.value = '0';
+                updateCountryChart(countries[0]);
+            }
+        }
+
+        function updateCountryChart(country) {
+            const current = country.timeline['2026']?.overall || 0;
+            const forecast = country.timeline['2030']?.overall || 0;
+            const historicalChange = current - start;
+            const forecastChange = forecast - current;
+            const totalChange = forecast - start;
+            const totalChangePercent = ((totalChange / start) * 100).toFixed(1);
+            
+            let trendClass, arrow, trendText;
+            if (totalChange > 0.01) {
+                trendClass = 'trend-up';
+                arrow = '↗️';
+                trendText = `Improving: +${totalChange.toFixed(3)} (+${totalChangePercent}%) from 2019 to 2030 | Historical: +${historicalChange.toFixed(3)} | Forecast: +${forecastChange.toFixed(3)}`;
+            } else if (totalChange < -0.01) {
+                trendClass = 'trend-down';
+                arrow = '↘️';
+                trendText = `Declining: ${totalChange.toFixed(3)} (${totalChangePercent}%) from 2019 to 2030 | Historical: ${historicalChange.toFixed(3)} | Forecast: ${forecastChange.toFixed(3)}`;
+            } else {
+                trendClass = 'trend-stable';
+                arrow = '➡️';
+                trendText = `Stable: ${totalChange >= 0 ? '+' : ''}${totalChange.toFixed(3)} from 2019 to 2030
+                            borderColor: 'rgb(102, 126, 234)',
+                            backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                            borderWidth: 3,
+                            fill: true,
+                            tension: 0.4,
+                            pointRadius: 5
+                        },
+                        {
+                            label: 'Financial',
+                            data: financialData,
+                            borderColor: 'rgb(59, 130, 246)',
+                            borderWidth: 2,
+                            tension: 0.4,
+                            pointRadius: 4
+                        },
+                        {
+                            label: 'Social',
+                            data: socialData,
+                            borderColor: 'rgb(139, 92, 246)',
+                            borderWidth: 2,
+                            tension: 0.4,
+                            pointRadius: 4
+                        },
+                        {
+                            label: 'Infrastructure',
+                            data: infraData,
+                            borderColor: 'rgb(236, 72, 153)',
+                            borderWidth: 2,
+                            tension: 0.4,
+                            pointRadius: 4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: { font: { size: 12, weight: 'bold' } }
+                        },
+                        title: {
+                            display: true,
+                            text: country.name,
+                            font: { size: 18, weight: 'bold' }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            min: 0,
+                            max: 1,
+                            grid: { color: 'rgba(0, 0, 0, 0.05)' }
+                        },
+                        x: { grid: { display: false } }
+                    }
+                }
+            });
+
+            // Update trend indicator
+            const start = country.timeline['2019']?.overall || 0;
+            const end = country.timeline['2026']?.overall || 0;
+            const change = end - start;
+            const changePercent = ((change / start) * 100).toFixed(1);
+            
+            let trendClass, arrow, trendText;
+            if (change > 0.01) {
+                trendClass = 'trend-up';
+                arrow = '↗️';
+                trendText = `Improving: +${change.toFixed(3)} (+${changePercent}%) from 2019 to 2026`;
+            } else if (change < -0.01) {
+                trendClass = 'trend-down';
+                arrow = '↘️';
+                trendText = `Declining: ${change.toFixed(3)} (${changePercent}%) from 2019 to 2026`;
+            } else {
+                trendClass = 'trend-stable';
+                arrow = '➡️';
+                trendText = `Stable: ${change >= 0 ? '+' : ''}${change.toFixed(3)} from 2019 to 2026`;
+            }
+            
+            document.getElementById('trendIndicator').innerHTML = `
+                <div class="trend-indicator">
+                    <div class="trend-arrow">${arrow}</div>
+                    <div class="trend-text ${trendClass}">${trendText}</div>
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html>
