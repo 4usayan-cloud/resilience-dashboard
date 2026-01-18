@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>National Resilience Dashboard - Fast Load</title>
+    
+    <!-- Preconnect to external resources -->
+    <link rel="preconnect" href="https://unpkg.com" crossorigin>
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+    <link rel="preconnect" href="https://cartodb-basemaps-a.global.ssl.fastly.net" crossorigin>
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px 40px;
+            text-align: center;
+        }
+        
+        header h1 { font-size: 42px; margin-bottom: 10px; font-weight: 700; }
+        header p { font-size: 18px; opacity: 0.95; }
+        
+        #map {
+            height: 700px;
+            width: 100%;
+            background: #f0f0f0;
+        }
+        
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+            transition: opacity 0.5s ease;
+        }
+        
+        .loading-overlay.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+        
+        .spinner {
+            border: 4px solid rgba(255,255,255,0.3);
+            border-top: 4px solid white;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .progress { margin-top: 20px; font-size: 14px; opacity: 0.9; }
+        
+        .status { 
+            margin-top: 10px; 
+            padding: 10px 20px; 
+            background: rgba(255,255,255,0.2); 
+            border-radius: 8px; 
+            font-size: 13px;
+        }
+        
+        .controls {
+            padding: 20px 40px;
+            background: #f8f9fa;
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        
+        .control-group label { font-size: 12px; font-weight: 600; color: #6b7280; }
+        
+        select {
+            padding: 8px 12px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 14px;
+            background: white;
+            cursor: pointer;
+        }
+        
+        select:hover { border-color: #667eea; }
+        
+        .cache-info {
+            margin-left: auto;
+            padding: 8px 15px;
+            background: #10b981;
+            color: white;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .cache-info.loading { background: #f59e0b; }
+    </style>
+</head>
+<body>
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="spinner"></div>
+        <h2 id="loadingTitle">🌍 Loading Resilience Dashboard</h2>
+        <div class="progress" id="loadingProgress">Initializing...</div>
+        <div class="status" id="loadingStatus">⚡ Fast mode enabled - Using cached data</div>
+    </div>
+
+    <div class="container">
+        <header>
+            <h1>🌍 National Resilience Dashboard</h1>
+            <p>Fast-Loading Edition with Smart Caching | 253 Countries</p>
+        </header>
+        
+        <div class="controls">
+            <div class="control-group">
+                <label>Year</label>
+                <select id="yearSelect">
+                    <option value="2025" selected>2025 (Current)</option>
+                    <option value="2019">2019</option>
+                    <option value="2020">2020</option>
+                    <option value="2021">2021</option>
+                    <option value="2022">2022</option>
+                    <option value="2023">2023</option>
+                    <option value="2024">2024</option>
+                    <option value="2026">2026 (Forecast)</option>
+                    <option value="2027">2027 (Forecast)</option>
+                    <option value="2028">2028 (Forecast)</option>
+                    <option value="2029">2029 (Forecast)</option>
+                    <option value="2030">2030 (Forecast)</option>
+                </select>
+            </div>
+            
+            <div class="control-group">
+                <label>Pillar / Indicator</label>
+                <select id="pillarSelect">
+                    <option value="overall" selected>Overall Resilience</option>
+                    <option value="financial">💰 Financial</option>
+                    <option value="social">👥 Social</option>
+                    <option value="institutional">🏛️ Institutional</option>
+                    <option value="infrastructure">🏗️ Infrastructure</option>
+                </select>
+            </div>
+            
+            <div class="cache-info" id="cacheInfo">⚡ Fast Loading</div>
+        </div>
+        
+        <div id="map"></div>
+    </div>
+
+    <script>
+        // Fast-loading resilience dashboard with localStorage caching
+        let map = null;
+        let geoJsonLayer = null;
+        let RESILIENCE_DATA = [];
+        let WORLD_GEOJSON = null;
+        
+        // Cache management
+        const CACHE_VERSION = '1.0';
+        const CACHE_KEY_DATA = 'resilience_data_v' + CACHE_VERSION;
+        const CACHE_KEY_GEO = 'resilience_geo_v' + CACHE_VERSION;
+        const CACHE_EXPIRY = 24 * 60 * 60 * 1000; // 24 hours
+        
+        // Update loading status
+        function updateStatus(message, progress = '') {
+            document.getElementById('loadingTitle').textContent = message;
+            if (progress) {
+                document.getElementById('loadingProgress').textContent = progress;
+            }
+        }
+        
+        // Check if data is cached and fresh
+        function getCachedData(key) {
+            try {
+                const cached = localStorage.getItem(key);
+                if (!cached) return null;
+                
+                const data = JSON.parse(cached);
+                const age = Date.now() - data.timestamp;
+                
+                if (age > CACHE_EXPIRY) {
+                    localStorage.removeItem(key);
+                    return null;
+                }
+                
+                return data.content;
+            } catch (e) {
+                console.error('Cache read error:', e);
+                return null;
+            }
+        }
+        
+        // Save data to cache
+        function setCachedData(key, content) {
+            try {
+                const data = {
+                    content: content,
+                    timestamp: Date.now()
+                };
+                localStorage.setItem(key, JSON.stringify(data));
+                return true;
+            } catch (e) {
+                console.error('Cache write error (storage full?):', e);
+                // Clear old cache if storage is full
+                try {
+                    localStorage.clear();
+                    localStorage.setItem(key, JSON.stringify(data));
+                } catch (e2) {
+                    console.error('Cannot cache data:', e2);
+                }
+                return false;
+            }
+        }
+        
+        // Load data from original file or cache
+        async function loadData() {
+            // Check cache first
+            const cachedGeo = getCachedData(CACHE_KEY_GEO);
+            const cachedData = getCachedData(CACHE_KEY_DATA);
+            
+            if (cachedGeo && cachedData) {
+                updateStatus('✅ Loading from cache', 'Ultra-fast mode');
+                document.getElementById('cacheInfo').textContent = '⚡ Loaded from cache';
+                WORLD_GEOJSON = cachedGeo;
+                RESILIENCE_DATA = cachedData;
+                return true;
+            }
+            
+            // Otherwise, load from full file and cache it
+            updateStatus('📥 Loading data (first time)', 'This will be faster next time...');
+            document.getElementById('cacheInfo').textContent = '📥 Downloading...';
+            document.getElementById('cacheInfo').classList.add('loading');
+            
+            try {
+                const response = await fetch('resilience_integrated_dashboard_v2.html');
+                const html = await response.text();
+                
+                // Extract RESILIENCE_DATA
+                updateStatus('📥 Processing data', 'Parsing country data...');
+                const dataMatch = html.match(/const RESILIENCE_DATA = (\[.*?\]);/s);
+                if (dataMatch) {
+                    RESILIENCE_DATA = eval(dataMatch[1]);
+                    setCachedData(CACHE_KEY_DATA, RESILIENCE_DATA);
+                }
+                
+                // Extract WORLD_GEOJSON
+                updateStatus('📥 Processing map', 'Parsing geographic data...');
+                const geoMatch = html.match(/const WORLD_GEOJSON = (\{.*?\});[\s\n]*\/\/ Get color/s);
+                if (geoMatch) {
+                    WORLD_GEOJSON = JSON.parse(geoMatch[1]);
+                    setCachedData(CACHE_KEY_GEO, WORLD_GEOJSON);
+                }
+                
+                document.getElementById('cacheInfo').textContent = '✅ Cached for fast loading';
+                document.getElementById('cacheInfo').classList.remove('loading');
+                return true;
+            } catch (error) {
+                console.error('Error loading data:', error);
+                updateStatus('❌ Error loading data', error.message);
+                return false;
+            }
+        }
+        
+        // Color scale
+        function getColor(score) {
+            if (!score || score === 0) return '#d1d5db';
+            if (score >= 0.66) return '#166534';
+            if (score >= 0.60) return '#22c55e';
+            if (score >= 0.53) return '#facc15';
+            if (score >= 0.45) return '#f97316';
+            return '#dc2626';
+        }
+        
+        // Initialize map
+        function initMap() {
+            updateStatus('🗺️ Creating map', 'Initializing Leaflet...');
+            
+            map = L.map('map', {
+                preferCanvas: true,
+                zoomControl: true,
+                scrollWheelZoom: true
+            }).setView([20, 0], 2);
+            
+            L.tileLayer('https://cartodb-basemaps-{s}.global.ssl.fastly.net/light_all/{z}/{x}/{y}.png', {
+                attribution: '©OpenStreetMap, ©CartoDB',
+                maxZoom: 18,
+                crossOrigin: true
+            }).addTo(map);
+            
+            updateMap();
+        }
+        
+        // Update map with current selections
+        function updateMap() {
+            const year = document.getElementById('yearSelect').value;
+            const pillar = document.getElementById('pillarSelect').value;
+            
+            if (geoJsonLayer) {
+                map.removeLayer(geoJsonLayer);
+            }
+            
+            if (!WORLD_GEOJSON || !RESILIENCE_DATA.length) return;
+            
+            updateStatus('🎨 Rendering map', `Showing ${pillar} for ${year}`);
+            
+            geoJsonLayer = L.geoJSON(WORLD_GEOJSON, {
+                style: function(feature) {
+                    const iso3 = feature.properties['ISO3166-1-Alpha-3'];
+                    const country = RESILIENCE_DATA.find(c => c.iso3 === iso3);
+                    const score = country?.timeline[year]?.[pillar] || 0;
+                    
+                    return {
+                        fillColor: getColor(score),
+                        weight: 1,
+                        opacity: 1,
+                        color: 'white',
+                        fillOpacity: 0.8
+                    };
+                },
+                onEachFeature: function(feature, layer) {
+                    const iso3 = feature.properties['ISO3166-1-Alpha-3'];
+                    const country = RESILIENCE_DATA.find(c => c.iso3 === iso3);
+                    
+                    if (country) {
+                        const score = country.timeline[year]?.[pillar] || 0;
+                        layer.bindTooltip(
+                            `<strong>${country.name}</strong><br/>${pillar}: ${score.toFixed(3)}`,
+                            { direction: 'top' }
+                        );
+                    }
+                }
+            }).addTo(map);
+        }
+        
+        // Event listeners
+        document.getElementById('yearSelect').addEventListener('change', updateMap);
+        document.getElementById('pillarSelect').addEventListener('change', updateMap);
+        
+        // Initialize
+        async function initialize() {
+            const success = await loadData();
+            
+            if (success && RESILIENCE_DATA.length > 0 && WORLD_GEOJSON) {
+                updateStatus('✅ Ready!', `Loaded ${RESILIENCE_DATA.length} countries`);
+                
+                setTimeout(() => {
+                    initMap();
+                    
+                    // Hide loading overlay
+                    setTimeout(() => {
+                        document.getElementById('loadingOverlay').classList.add('hidden');
+                    }, 500);
+                }, 300);
+            } else {
+                updateStatus('❌ Failed to load', 'Please refresh the page');
+            }
+        }
+        
+        // Start when page loads
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initialize);
+        } else {
+            initialize();
+        }
+    </script>
+</body>
+</html>
